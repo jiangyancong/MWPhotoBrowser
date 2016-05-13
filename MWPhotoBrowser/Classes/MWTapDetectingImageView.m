@@ -13,6 +13,7 @@
 - (id)initWithFrame:(CGRect)frame {
 	if ((self = [super initWithFrame:frame])) {
 		self.userInteractionEnabled = YES;
+        [self initImageView];
 	}
 	return self;
 }
@@ -31,16 +32,35 @@
 	return self;
 }
 
+- (void)initImageView
+{
+    
+    UITapGestureRecognizer *singleTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                       action:@selector(handleSingleTap:)];
+    singleTapGesture.numberOfTapsRequired = 1;
+    
+    [self addGestureRecognizer:singleTapGesture];
+    
+    // Add gesture,double tap zoom imageView.
+    UITapGestureRecognizer *doubleTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                       action:@selector(handleDoubleTap:)];
+    [doubleTapGesture setNumberOfTapsRequired:2];
+    [self addGestureRecognizer:doubleTapGesture];
+    
+    [singleTapGesture requireGestureRecognizerToFail:doubleTapGesture];
+    
+}
+
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
 	UITouch *touch = [touches anyObject];
 	NSUInteger tapCount = touch.tapCount;
 	switch (tapCount) {
-		case 1:
-			[self handleSingleTap:touch];
-			break;
-		case 2:
-			[self handleDoubleTap:touch];
-			break;
+//		case 1:
+//			[self handleSingleTap:touch];
+//			break;
+//		case 2:
+//			[self handleDoubleTap:touch];
+//			break;
 		case 3:
 			[self handleTripleTap:touch];
 			break;

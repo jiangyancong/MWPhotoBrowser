@@ -138,6 +138,14 @@
 }
 
 - (void)selectionButtonPressed {
+    if (_selectedButton.selected == NO) {
+        if ([_gridController.browser.delegate respondsToSelector:@selector(numberOfPhotoCanBeAdded)]) {
+            if ([_gridController.browser.delegate numberOfPhotoCanBeAdded] == 0) {
+                return;
+            }
+        }
+    }
+    
     _selectedButton.selected = !_selectedButton.selected;
     [_gridController.browser setPhotoSelected:_selectedButton.selected atIndex:_index];
 }
@@ -219,5 +227,6 @@
         [self hideLoadingIndicator];
     }
 }
+
 
 @end
