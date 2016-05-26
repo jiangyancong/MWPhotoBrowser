@@ -38,12 +38,12 @@
             _marginL = 1, _gutterL = 2;
         } else if ([UIScreen mainScreen].bounds.size.height == 480) {
             // iPhone 3.5 inch
-            _columns = 3, _columnsL = 4;
+            _columns = 4, _columnsL = 4;
             _margin = 0, _gutter = 1;
             _marginL = 1, _gutterL = 2;
         } else {
             // iPhone 4 inch
-            _columns = 3, _columnsL = 5;
+            _columns = 4, _columnsL = 5;
             _margin = 0, _gutter = 1;
             _marginL = 0, _gutterL = 2;
         }
@@ -60,7 +60,7 @@
     [super viewDidLoad];
     [self.collectionView registerClass:[MWGridCell class] forCellWithReuseIdentifier:@"GridCell"];
     self.collectionView.alwaysBounceVertical = YES;
-    self.collectionView.backgroundColor = [UIColor blackColor];
+    self.collectionView.backgroundColor = [UIColor whiteColor];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -168,6 +168,14 @@
     } else {
         [photo loadUnderlyingImageAndNotify];
     }
+    
+    //patch here!! 需要直接显示大图，用来回传到writePostController
+//    id <MWPhoto> mainPhoto = [_browser photoAtIndex:indexPath.row];
+//    UIImage *mainImg = [_browser imageForPhoto:mainPhoto];
+//    if (!mainImg) {
+//        [mainPhoto loadUnderlyingImageAndNotify];
+//    }
+
     return cell;
 }
 

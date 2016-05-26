@@ -19,5 +19,6 @@
 @property (nonatomic) BOOL isSelected;
 
 - (void)displayImage;
+- (void)selectionButtonPressed;
 
 @end

@@ -35,7 +35,8 @@
 - (BOOL)photoBrowser:(MWPhotoBrowser *)photoBrowser isPhotoSelectedAtIndex:(NSUInteger)index;
 - (void)photoBrowser:(MWPhotoBrowser *)photoBrowser photoAtIndex:(NSUInteger)index selectedChanged:(BOOL)selected;
 - (void)photoBrowserDidFinishModalPresentation:(MWPhotoBrowser *)photoBrowser;
-
+- (int)numberOfPhotoCanBeAdded;
+- (void)singleTapEvent;
 @end
 
 @interface MWPhotoBrowser : UIViewController <UIScrollViewDelegate, UIActionSheetDelegate>
@@ -49,6 +50,9 @@
 @property (nonatomic) BOOL enableGrid;
 @property (nonatomic) BOOL enableSwipeToDismiss;
 @property (nonatomic) BOOL startOnGrid;
+@property (nonatomic) BOOL keepNavBarAppearance;
+// 将退出键放在左边
+@property (nonatomic) BOOL displayExitButtonOnLeft;
 @property (nonatomic) BOOL autoPlayOnAppear;
 @property (nonatomic) NSUInteger delayToHideElements;
 @property (nonatomic, readonly) NSUInteger currentIndex;
@@ -72,4 +76,9 @@
 - (void)showNextPhotoAnimated:(BOOL)animated;
 - (void)showPreviousPhotoAnimated:(BOOL)animated;
 
+// Customize
+- (void)setNavBarAppearance:(BOOL)animated;
+- (UIImage *)imageForPhoto:(id<MWPhoto>)photo;
+
+- (void)hideControls;
 @end

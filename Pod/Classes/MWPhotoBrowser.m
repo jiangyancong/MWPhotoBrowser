@@ -58,7 +58,7 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     } else {
         _isVCBasedStatusBarAppearance = YES; // default
     }
-    self.hidesBottomBarWhenPushed = YES;
+    //self.hidesBottomBarWhenPushed = YES;
     _hasBelongedToViewController = NO;
     _photoCount = NSNotFound;
     _previousLayoutBounds = CGRectZero;
@@ -74,6 +74,7 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     _enableGrid = YES;
     _startOnGrid = NO;
     _enableSwipeToDismiss = YES;
+    _keepNavBarAppearance = NO;
     _delayToHideElements = 5;
     _visiblePages = [[NSMutableSet alloc] init];
     _recycledPages = [[NSMutableSet alloc] init];
@@ -81,7 +82,11 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     _thumbPhotos = [[NSMutableArray alloc] init];
     _currentGridContentOffset = CGPointMake(0, CGFLOAT_MAX);
     _didSavePreviousStateOfNavBar = NO;
-    self.automaticallyAdjustsScrollViewInsets = NO;
+    
+    _displayExitButtonOnLeft = NO;
+    if ([self respondsToSelector:@selector(automaticallyAdjustsScrollViewInsets)]){
+        self.automaticallyAdjustsScrollViewInsets = NO;
+    }
     
     // Listen for MWPhoto notifications
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -161,11 +166,17 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
 	
     // Toolbar
     _toolbar = [[UIToolbar alloc] initWithFrame:[self frameForToolbarAtOrientation:self.interfaceOrientation]];
-    _toolbar.tintColor = [UIColor whiteColor];
-    _toolbar.barTintColor = nil;
-    [_toolbar setBackgroundImage:nil forToolbarPosition:UIToolbarPositionAny barMetrics:UIBarMetricsDefault];
-    [_toolbar setBackgroundImage:nil forToolbarPosition:UIToolbarPositionAny barMetrics:UIBarMetricsLandscapePhone];
-    _toolbar.barStyle = UIBarStyleBlackTranslucent;
+    _toolbar.tintColor = SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"7") ? [UIColor whiteColor] : nil;
+    if ([_toolbar respondsToSelector:@selector(setBarTintColor:)]) {
+        _toolbar.barTintColor = nil;
+    }
+    if ([[UIToolbar class] respondsToSelector:@selector(appearance)]) {
+        [_toolbar setBackgroundImage:nil forToolbarPosition:UIToolbarPositionAny barMetrics:UIBarMetricsDefault];
+        [_toolbar setBackgroundImage:nil forToolbarPosition:UIToolbarPositionAny barMetrics:UIBarMetricsLandscapePhone];
+    }
+    //_toolbar.barStyle = UIBarStyleBlackTranslucent;
+    _toolbar.translucent = YES;
+    _toolbar.barStyle = UIBarStyleBlack;
     _toolbar.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
     
     // Toolbar Items
@@ -208,15 +219,26 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     // Navigation buttons
     if ([self.navigationController.viewControllers objectAtIndex:0] == self) {
         // We're first on stack so show done button
-        _doneButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Done", nil) style:UIBarButtonItemStylePlain target:self action:@selector(doneButtonPressed:)];
+        _doneButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"退出", nil) style:UIBarButtonItemStylePlain target:self action:@selector(doneButtonPressed:)];
         // Set appearance
-        [_doneButton setBackgroundImage:nil forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
-        [_doneButton setBackgroundImage:nil forState:UIControlStateNormal barMetrics:UIBarMetricsLandscapePhone];
-        [_doneButton setBackgroundImage:nil forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
-        [_doneButton setBackgroundImage:nil forState:UIControlStateHighlighted barMetrics:UIBarMetricsLandscapePhone];
-        [_doneButton setTitleTextAttributes:[NSDictionary dictionary] forState:UIControlStateNormal];
-        [_doneButton setTitleTextAttributes:[NSDictionary dictionary] forState:UIControlStateHighlighted];
-        self.navigationItem.rightBarButtonItem = _doneButton;
+        if ([UIBarButtonItem respondsToSelector:@selector(appearance)]) {
+            [_doneButton setBackgroundImage:nil forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+            [_doneButton setBackgroundImage:nil forState:UIControlStateNormal barMetrics:UIBarMetricsLandscapePhone];
+            [_doneButton setBackgroundImage:nil forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+            [_doneButton setBackgroundImage:nil forState:UIControlStateHighlighted barMetrics:UIBarMetricsLandscapePhone];
+            [_doneButton setTitleTextAttributes:[NSDictionary dictionary] forState:UIControlStateNormal];
+            [_doneButton setTitleTextAttributes:[NSDictionary dictionary] forState:UIControlStateHighlighted];
+        }
+        
+        if (self.displayExitButtonOnLeft == NO) {
+            if (self.navigationItem.rightBarButtonItem == nil) {
+                self.navigationItem.rightBarButtonItem = _doneButton;
+            }
+        }else {
+            if(self.navigationItem.leftBarButtonItem == nil) {
+                self.navigationItem.leftBarButtonItem = _doneButton;
+            }
+        }
     } else {
         // We're not first so show back button
         UIViewController *previousViewController = [self.navigationController.viewControllers objectAtIndex:self.navigationController.viewControllers.count-2];
@@ -282,7 +304,11 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     if (hideToolbar) {
         [_toolbar removeFromSuperview];
     } else {
-        [self.view addSubview:_toolbar];
+        if (_gridController) {
+            [self.view insertSubview:_toolbar belowSubview:_gridController.view];
+        } else {
+            [self.view addSubview:_toolbar];
+        }
     }
     
     // Update nav
@@ -446,9 +472,12 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     navBar.barTintColor = nil;
     navBar.shadowImage = nil;
     navBar.translucent = YES;
-    navBar.barStyle = UIBarStyleBlackTranslucent;
-    [navBar setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
-    [navBar setBackgroundImage:nil forBarMetrics:UIBarMetricsLandscapePhone];
+    navBar.barStyle = UIBarStyleBlack;
+    //navBar.barStyle = UIBarStyleBlackTranslucent;
+    if ([[UINavigationBar class] respondsToSelector:@selector(appearance)]) {
+        [navBar setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
+        [navBar setBackgroundImage:nil forBarMetrics:UIBarMetricsLandscapePhone];
+    }
 }
 
 - (void)storePreviousNavBarAppearance {
@@ -628,6 +657,10 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
         }
         [self performLayout];
         [self.view setNeedsLayout];
+        //bug fix!!
+        if (_gridController) {
+            [_gridController.collectionView reloadData];
+        }
     }
     
 }
@@ -686,6 +719,7 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
             if ([photo caption]) captionView = [[MWCaptionView alloc] initWithPhoto:photo];
         }
     }
+    
     captionView.alpha = [self areControlsHidden] ? 0 : 1; // Initial alpha
     return captionView;
 }
@@ -892,6 +926,8 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
 			thePage = page; break;
 		}
 	}
+    
+    thePage.scrollEnabled = NO;
 	return thePage;
 }
 
@@ -930,7 +966,10 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
         // Release anything < index - 1
         for (i = 0; i < index-1; i++) { 
             id photo = [_photos objectAtIndex:i];
-            if (photo != [NSNull null]) {
+            
+            //keep the photo is selected
+            if (photo != [NSNull null] &&
+                ![self photoIsSelectedAtIndex:i]) {
                 [photo unloadUnderlyingImage];
                 [_photos replaceObjectAtIndex:i withObject:[NSNull null]];
                 MWLog(@"Released underlying image at index %lu", (unsigned long)i);
@@ -941,7 +980,10 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
         // Release anything > index + 1
         for (i = index + 2; i < _photos.count; i++) {
             id photo = [_photos objectAtIndex:i];
-            if (photo != [NSNull null]) {
+            
+            //keep the photo is selected
+            if (photo != [NSNull null] &&
+                ![self photoIsSelectedAtIndex:i]) {
                 [photo unloadUnderlyingImage];
                 [_photos replaceObjectAtIndex:i withObject:[NSNull null]];
                 MWLog(@"Released underlying image at index %lu", (unsigned long)i);
@@ -1083,7 +1125,8 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     NSUInteger numberOfPhotos = [self numberOfPhotos];
     if (_gridController) {
         if (_gridController.selectionMode) {
-            self.title = NSLocalizedString(@"Select Photos", nil);
+            //self.title = NSLocalizedString(@"Select Photos", nil);
+            self.title = @"";
         } else {
             NSString *photosText;
             if (numberOfPhotos == 1) {
@@ -1096,6 +1139,10 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     } else if (numberOfPhotos > 1) {
         if ([_delegate respondsToSelector:@selector(photoBrowser:titleForPhotoAtIndex:)]) {
             self.title = [_delegate photoBrowser:self titleForPhotoAtIndex:_currentPageIndex];
+            
+            //NSString *pageIndexStr = [NSString stringWithFormat:@"   %lu %@ %lu", (unsigned long)(_currentPageIndex+1), NSLocalizedString(@"of", @"Used in the context: 'Showing 1 of 3 items'"), (unsigned long)numberOfPhotos];
+            //self.title = [self.title stringByAppendingString:pageIndexStr];
+            
         } else {
             self.title = [NSString stringWithFormat:@"%lu %@ %lu", (unsigned long)(_currentPageIndex+1), NSLocalizedString(@"of", @"Used in the context: 'Showing 1 of 3 items'"), (unsigned long)numberOfPhotos];
         }
@@ -1149,9 +1196,17 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
 }
 
 #pragma mark - Interactions
-
 - (void)selectedButtonTapped:(id)sender {
     UIButton *selectedButton = (UIButton *)sender;
+
+    if (selectedButton.selected == NO) {
+        if ([_delegate respondsToSelector:@selector(numberOfPhotoCanBeAdded)]) {
+            if ([_delegate numberOfPhotoCanBeAdded] == 0) {
+                return;
+            }
+        }
+    }
+    
     selectedButton.selected = !selectedButton.selected;
     NSUInteger index = NSUIntegerMax;
     for (MWZoomingScrollView *page in _visiblePages) {
@@ -1529,8 +1584,19 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
 
 - (BOOL)areControlsHidden { return (_toolbar.alpha == 0); }
 - (void)hideControls { [self setControlsHidden:YES animated:YES permanent:NO]; }
-- (void)showControls { [self setControlsHidden:NO animated:YES permanent:NO]; }
-- (void)toggleControls { [self setControlsHidden:![self areControlsHidden] animated:YES permanent:NO]; }
+- (void)toggleControls {
+    //单击退出或者显示导航栏
+    if (![self areControlsHidden]) {
+        if ([_delegate respondsToSelector:@selector(singleTapEvent)]) {
+            
+            [_delegate singleTapEvent];
+        }
+        
+        [self doneButtonPressed:self];
+    } else {
+        [self setControlsHidden:![self areControlsHidden] animated:YES permanent:NO];
+    }
+}
 
 #pragma mark - Properties
 

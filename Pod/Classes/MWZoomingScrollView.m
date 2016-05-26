@@ -31,7 +31,7 @@
 
 - (id)initWithPhotoBrowser:(MWPhotoBrowser *)browser {
     if ((self = [super init])) {
-        
+        //self.scrollEnabled = NO;
         // Setup
         _index = NSUIntegerMax;
         _photoBrowser = browser;
@@ -93,6 +93,7 @@
     _photoImageView.hidden = NO;
     _photoImageView.image = nil;
     _index = NSUIntegerMax;
+    //self.scrollEnabled = NO;
 }
 
 - (BOOL)displayingVideo {
@@ -364,6 +365,7 @@
 - (void)scrollViewWillBeginZooming:(UIScrollView *)scrollView withView:(UIView *)view {
     self.scrollEnabled = YES; // reset
 	[_photoBrowser cancelControlHiding];
+    [_photoBrowser hideControls];
 }
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
@@ -378,7 +380,13 @@
 #pragma mark - Tap Detection
 
 - (void)handleSingleTap:(CGPoint)touchPoint {
+    if (self.zoomScale != self.minimumZoomScale && self.zoomScale != [self initialZoomScaleWithMinScale]) {
+        
+    }else {
+    
 	[_photoBrowser performSelector:@selector(toggleControls) withObject:nil afterDelay:0.2];
+
+    }
 }
 
 - (void)handleDoubleTap:(CGPoint)touchPoint {
@@ -440,6 +448,15 @@
     touchX += self.contentOffset.x;
     touchY += self.contentOffset.y;
     [self handleDoubleTap:CGPointMake(touchX, touchY)];
+}
+
+- (void)scrollViewDidEndZooming:(UIScrollView *)scrollView withView:(UIView *)view atScale:(CGFloat)scale {
+    if (self.zoomScale > self.minimumZoomScale) {
+        scrollView.scrollEnabled = YES;
+    }
+    else {
+        scrollView.scrollEnabled = NO;
+    }
 }
 
 @end
